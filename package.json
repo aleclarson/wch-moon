@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "coffeescript": "^2.2.3",
-    "wch-coffee": "^0.1.0"
+    "wch-coffee": "^0.2.0"
   },
   "scripts": {
     "build": "coffee-build src -o js",
