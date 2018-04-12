@@ -11,7 +11,7 @@
     "wch-coffee": "^0.1.0"
   },
   "scripts": {
-    "build": "coffee-build -o js src",
-    "prepublishOnly": "prepv -i"
+    "build": "coffee-build src -o js",
+    "prepublishOnly": "prepv -i || true"
   }
 }
