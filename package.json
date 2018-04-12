@@ -1,0 +1,16 @@
+{
+  "name": "wch-moon",
+  "version": "0.0.1",
+  "main": "js/index",
+  "dependencies": {
+    "moonc": "aleclarson/node-moonc#1.1.3"
+  },
+  "devDependencies": {
+    "coffeescript": "^2.2.3",
+    "wch-coffee": "^0.1.0"
+  },
+  "scripts": {
+    "build": "coffee-build -o js src",
+    "prepublishOnly": "prepv -i"
+  }
+}
