@@ -55,7 +55,13 @@ compile = (input, file) ->
 
   try output = await moonc.promise input
   catch err
-    line = parseLine(err) - 1
+    line = parseLine err
+    if line is undefined
+      wch.emit 'file:error',
+        file: file.path
+        message: err.message
+      return
+
     last_column = input.split('\n')[line].length
     wch.emit 'file:error',
       file: file.path
@@ -68,4 +74,5 @@ compile = (input, file) ->
     return
 
 parseLine = (err) ->
-  Number /\[([0-9]+)\]/.exec(err.message)[1]
+  if match = /\[([0-9]+)\]/.exec err.message
+    return -1 + Number match[1]
