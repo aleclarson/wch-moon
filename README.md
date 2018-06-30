@@ -1,4 +1,4 @@
-# wch-moon v0.0.1 
+# wch-moon v0.1.0 
 
 Compile `.moon` files with [wch v0.8+](https://github.com/aleclarson/wch)
 
