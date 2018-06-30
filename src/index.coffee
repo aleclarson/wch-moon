@@ -3,76 +3,69 @@ path = require 'path'
 wch = require 'wch'
 fs = require 'fsx'
 
-plugin = wch.plugin()
-
 # TODO: Start the moonc process.
-plugin.on 'run', ->
+module.exports = (log) ->
+  debug = log.debug 'wch-moon'
 
-  files = plugin.watch 'src',
-    fields: ['name', 'exists', 'new', 'mtime_ms']
-    include: ['**/*.moon']
-    exclude: ['__*__']
+  shortPath = (path) ->
+    path.replace process.env.HOME, '~'
 
-  files
-    .filter (file) -> file.exists
-    .read compile
-    .save (file) -> file.dest
-    .then (dest, file) ->
-      wch.emit 'file:build', {file: file.path, dest}
+  parseLine = (err) ->
+    if match = /\[([0-9]+)\]/.exec err.message
+      return -1 + Number match[1]
 
-  files
-    .filter (file) -> !file.exists
-    .delete getDest
-    .then (dest, file) ->
-      wch.emit 'file:delete', {file: file.path, dest}
+  compile = (input, file) ->
+    try mtime = fs.stat(file.dest).mtime.getTime()
+    return if mtime and mtime > file.mtime_ms
 
-# TODO: Kill the moonc process.
-# plugin.on 'stop', ->
+    debug 'Transpiling:', shortPath file.path
+    try
+      output = await moonc.promise input
+      if typeof output isnt 'string'
+        throw Error 'moonc failed: ' + file.path
+      return output
 
-plugin.on 'add', (root) ->
-  root.dest = path.dirname root.main or 'dist/init'
-  root.getDest = getDest
-  return
+    catch err
+      line = parseLine err
+      if line is undefined
+        wch.emit 'file:error',
+          file: file.path
+          message: err.message
+        return
 
-module.exports = plugin
-
-#
-# Helpers
-#
-
-{log} = plugin
-
-getDest = (file) ->
-  path.join @path, @dest, file.name.replace /\.moon$/, '.lua'
-
-compile = (input, file) ->
-  file.dest = @getDest file
-  try mtime = fs.stat(file.dest).mtime.getTime()
-  return if mtime and mtime > file.mtime_ms
-
-  if log.verbose
-    log.pale_yellow 'Transpiling:', file.path
-
-  try output = await moonc.promise input
-  catch err
-    line = parseLine err
-    if line is undefined
       wch.emit 'file:error',
         file: file.path
+        line: line
         message: err.message
+
+      log log.red('Failed to compile:'), shortPath file.path
+      log log.gray err.stack
       return
 
-    last_column = input.split('\n')[line].length
-    wch.emit 'file:error',
-      file: file.path
-      message: err.message
-      location: [[line, 0], [line, last_column]]
+  build = wch.pipeline()
+    .read compile
+    .save (file) -> file.dest
+    .each (dest, file) ->
+      wch.emit 'file:build', {file: file.path, dest}
 
-    if log.verbose
-      log.red 'Failed to compile:', file.path
-      log.gray err.message
-    return
+  clear = wch.pipeline()
+    .delete (file) -> file.dest
+    .each (dest, file) ->
+      wch.emit 'file:delete', {file: file.path, dest}
 
-parseLine = (err) ->
-  if match = /\[([0-9]+)\]/.exec err.message
-    return -1 + Number match[1]
+  watchOptions =
+    only: ['*.moon']
+    skip: ['**/__*__/**']
+    fields: ['name', 'exists', 'new', 'mtime_ms']
+    crawl: true
+
+  attach: (pack) ->
+    dest = path.dirname path.resolve pack.path, pack.main or 'dist/init'
+    changes = pack.stream 'src', watchOptions
+    changes.on 'data', (file) ->
+      file.dest = path.join dest, file.name.replace /\.moon$/, '.lua'
+      action = if file.exists then build else clear
+      action.call pack, file
+
+  stop: ->
+    # TODO: Kill the moonc process.

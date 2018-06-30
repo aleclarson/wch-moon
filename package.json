@@ -2,16 +2,17 @@
   "name": "wch-moon",
   "version": "0.0.1",
   "main": "js/index",
+  "scripts": {
+    "build": "coffee-build src -o js",
+    "prepublishOnly": "prepv -i || true"
+  },
   "dependencies": {
     "fsx": "aleclarson/fsx#1.7.0",
-    "moonc": "aleclarson/node-moonc#1.1.3"
+    "moonc": "aleclarson/node-moonc#1.1.3",
+    "wch": "^0.8.0"
   },
   "devDependencies": {
     "coffeescript": "^2.2.3",
     "wch-coffee": "^0.2.0"
-  },
-  "scripts": {
-    "build": "coffee-build src -o js",
-    "prepublishOnly": "prepv -i || true"
   }
 }
